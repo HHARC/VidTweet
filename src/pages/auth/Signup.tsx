@@ -3,8 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
-import { API_BASE_URL } from '../../utils/api';
-import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -68,7 +66,6 @@ const Signup: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setAvatarFile(file);
-      // Create preview
       const reader = new FileReader();
       reader.onload = () => {
         setAvatarPreview(reader.result as string);
@@ -81,7 +78,6 @@ const Signup: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setCoverImageFile(file);
-      // Create preview
       const reader = new FileReader();
       reader.onload = () => {
         setCoverImagePreview(reader.result as string);
@@ -98,7 +94,6 @@ const Signup: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Create form data for file upload
       const formData = new FormData();
       formData.append('fullName', fullName);
       formData.append('email', email);
@@ -113,28 +108,12 @@ const Signup: React.FC = () => {
         formData.append('coverImage', coverImageFile);
       }
       
-      // Make API request
-      const response = await axios.post(`${API_BASE_URL}/users/register`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      await signup(formData);
+      toast.success('Account created successfully!');
       
-      // Handle successful response
-      if (response.data.statusCode === 200 || response.data.statusCode === 201) {
-        toast.success('Account created successfully!');
-        
-        // Get user data from response
-        const userData = response.data.data;
-        
-        // Update auth context with the new user
-        await signup(userData);
-        
-        // Redirect after short delay to allow toast to be seen
-        setTimeout(() => {
-          navigate('/login');
-        }, 1500);
-      }
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'An error occurred during signup. Please try again.';
       toast.error(errorMessage);
@@ -223,7 +202,6 @@ const Signup: React.FC = () => {
               autoComplete="new-password"
             />
 
-            {/* Avatar upload */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-text-primary">
                 Profile Picture (required)
@@ -269,7 +247,6 @@ const Signup: React.FC = () => {
               </div>
             </div>
 
-            {/* Cover Image upload (optional) */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-text-primary">
                 Cover Image (optional)
@@ -342,7 +319,6 @@ const Signup: React.FC = () => {
         </form>
       </div>
       
-      {/* Toast Container */}
       <ToastContainer
         position="top-right"
         autoClose={5000}

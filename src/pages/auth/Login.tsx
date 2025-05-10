@@ -3,13 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
-import { API_BASE_URL } from '../../utils/api';
-import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const Login: React.FC = () => {
-  const [emailOrUsername, setEmailOrUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -21,8 +19,10 @@ const Login: React.FC = () => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
-    if (!emailOrUsername) {
-      newErrors.emailOrUsername = 'Email or username is required';
+    if (!email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Email is invalid';
     }
     
     if (!password) {
@@ -41,46 +41,15 @@ const Login: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Check if input is email or username
-      const isEmail = emailOrUsername.includes('@');
+      await login(email, password);
+      toast.success('Login successful!');
       
-      // Create payload based on input type
-      const payload = {
-        [isEmail ? 'email' : 'username']: emailOrUsername,
-        password
-      };
-      
-      // Make API request
-      const response = await axios.post(`${API_BASE_URL}/users/login`, payload);
-      
-      // Handle successful response
-      if (response.data.statusCode === 200) {
-        toast.success('Login successful!');
-        
-        // Extract data
-        const { accessToken, refreshToken, user } = response.data.data;
-        
-        // Store tokens
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        
-        // If remember me is checked, store in localStorage, otherwise sessionStorage
-        if (rememberMe) {
-          localStorage.setItem('user', JSON.stringify(user));
-        } else {
-          sessionStorage.setItem('user', JSON.stringify(user));
-        }
-        
-        // Update auth context
-        await login(user);
-        
-        // Redirect to home after short delay
-        setTimeout(() => {
-          navigate('/');
-        }, 1000);
-      }
+      // Redirect to home after short delay
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Invalid email/username or password. Please try again.';
+      const errorMessage = error.response?.data?.message || 'Invalid email or password. Please try again.';
       toast.error(errorMessage);
       
       setErrors({ 
@@ -113,14 +82,14 @@ const Login: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <Input
-              id="emailOrUsername"
-              type="text"
-              label="Email or Username"
-              value={emailOrUsername}
-              onChange={(e) => setEmailOrUsername(e.target.value)}
-              error={errors.emailOrUsername}
-              placeholder="your@email.com or username"
-              autoComplete="username"
+              id="email"
+              type="email"
+              label="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={errors.email}
+              placeholder="your@email.com"
+              autoComplete="email"
             />
 
             <Input
@@ -169,7 +138,6 @@ const Login: React.FC = () => {
         </form>
       </div>
       
-      {/* Toast Container */}
       <ToastContainer
         position="top-right"
         autoClose={5000}
