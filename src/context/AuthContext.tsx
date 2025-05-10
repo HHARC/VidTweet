@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { API_BASE_URL } from '../utils/api';
+import api from '../utils/api';
 
 interface User {
   _id: string;
@@ -15,8 +14,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (userData: User) => Promise<void>;
-  signup: (userData: User) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (formData: FormData) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
 }
@@ -28,29 +27,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
     const checkAuthStatus = async () => {
       try {
         const accessToken = localStorage.getItem('accessToken');
         
         if (accessToken) {
-          // Fetch current user data
-          const response = await axios.get(`${API_BASE_URL}/users/current-user`, {
-            headers: {
-              Authorization: `Bearer ${accessToken}`
-            }
-          });
-          
+          const response = await api.get('/users/current-user');
           if (response.data.statusCode === 200) {
             setUser(response.data.data);
-          } else {
-            // Token might be invalid, try to refresh
-            await refreshToken();
           }
         }
       } catch (error) {
         console.error('Failed to fetch user:', error);
-        // Clear potentially invalid tokens
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
@@ -62,98 +50,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuthStatus();
   }, []);
 
-  const refreshToken = async () => {
+  const login = async (email: string, password: string) => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-      
-      const response = await axios.post(`${API_BASE_URL}/users/refresh-token`, {
-        refreshToken
-      });
+      const response = await api.post('/users/login', { email, password });
       
       if (response.data.statusCode === 200) {
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        const { accessToken, refreshToken, user } = response.data.data;
         
         localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('user', JSON.stringify(user));
         
-        // Fetch user data with new token
-        const userResponse = await axios.get(`${API_BASE_URL}/users/current-user`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        });
-        
-        if (userResponse.data.statusCode === 200) {
-          setUser(userResponse.data.data);
-        }
-      } else {
-        throw new Error('Failed to refresh token');
+        setUser(user);
       }
-    } catch (error) {
-      console.error('Failed to refresh token:', error);
-      // Clear localStorage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      setUser(null);
-    }
-  };
-
-  const login = async (userData: User) => {
-    setIsLoading(true);
-    try {
-      // The actual API call is being handled in the Login component
-      // Just set the user in the context
-      setUser(userData);
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const signup = async (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    // Note: The actual API call is being handled in the Signup component
-    // The auth context just stores the user information after successful signup
+  const signup = async (formData: FormData) => {
+    try {
+      const response = await api.post('/users/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      if (response.data.statusCode === 200 || response.data.statusCode === 201) {
+        const { user } = response.data.data;
+        setUser(user);
+      }
+    } catch (error) {
+      console.error('Signup failed:', error);
+      throw error;
+    }
   };
 
   const logout = async () => {
-    setIsLoading(true);
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      
-      if (accessToken) {
-        await axios.post(`${API_BASE_URL}/users/logout`, {}, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        });
-      }
+      await api.post('/users/logout');
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
-      // Clear user data regardless of API success
       setUser(null);
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
-      setIsLoading(false);
     }
   };
 
   const forgotPassword = async (email: string) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/users/forgot-password`, {
-        email
-      });
-      
+      const response = await api.post('/users/forgot-password', { email });
       return response.data;
     } catch (error) {
       console.error('Forgot password failed:', error);
