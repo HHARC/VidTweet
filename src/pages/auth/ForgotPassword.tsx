@@ -1,44 +1,50 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Link } from 'react-router-dom';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
+import { toast } from 'react-toastify'; // Import toast from react-toastify
+import 'react-toastify/dist/ReactToastify.css'; // Import the CSS for Toast
 
 const ForgotPassword: React.FC = () => {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { forgotPassword } = useAuth();
+
+  const { changePassword } = useAuth();  // Assuming `changePassword` is a function in your context
 
   const validateForm = () => {
-    if (!email) {
-      setError('Email is required');
-      return false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Email is invalid');
+    if (!username || !email || !newPassword || !confirmPassword) {
+      setError('All fields are required');
       return false;
     }
-    
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+
     setError('');
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
-    
     try {
-      await forgotPassword(email);
-      setIsSubmitted(true);
-    } catch (error) {
-      setError('An error occurred. Please try again later.');
-    } finally {
+      await changePassword(username, email, newPassword);  // API call to backend
       setIsLoading(false);
+      toast.success('Password changed successfully!');  // Show success toast
+    } catch (error) {
+      setIsLoading(false);
+      setError('Failed to change password. Please try again.');
+      toast.error('Failed to change password. Please try again.');  // Show error toast
     }
   };
 
@@ -46,65 +52,65 @@ const ForgotPassword: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-beige px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md dark:bg-gray-800">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-text-primary">Reset your password</h2>
+          <h2 className="text-3xl font-bold text-text-primary">Change Password</h2>
           <p className="mt-2 text-sm text-text-secondary">
-            Enter your email and we'll send you a link to reset your password
+            Enter your username, email, and a new password to reset it.
           </p>
         </div>
 
-        {isSubmitted ? (
-          <div className="rounded-md bg-green-50 p-4 dark:bg-green-900/20">
-            <p className="text-sm text-green-800 dark:text-green-300">
-              If an account exists with this email, you will receive a password reset link shortly.
-            </p>
-            <div className="mt-4">
-              <Link
-                to="/login"
-                className="inline-flex items-center text-sm font-medium text-orange hover:text-orange/80"
-              >
-                Return to login
-              </Link>
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+          {error && (
+            <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
+              <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
             </div>
+          )}
+
+          <div className="space-y-4">
+            <Input
+              label="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              required
+            />
+
+            <Input
+              label="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+            />
+
+            <Input
+              label="New Password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter your new password"
+              required
+            />
+
+            <Input
+              label="Confirm Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your new password"
+              required
+            />
           </div>
-        ) : (
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-md bg-red-50 p-4 dark:bg-red-900/20">
-                <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
-              </div>
-            )}
 
-            <div>
-              <Input
-                id="email"
-                type="email"
-                label="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                autoComplete="email"
-              />
-            </div>
+          <Button type="submit" isLoading={isLoading}>
+            Change Password
+          </Button>
 
-            <Button
-              type="submit"
-              variant="primary"
-              fullWidth
-              isLoading={isLoading}
-            >
-              Send reset link
-            </Button>
-
-            <div className="text-center">
-              <Link
-                to="/login"
-                className="text-sm font-medium text-orange hover:text-orange/80"
-              >
-                Back to login
-              </Link>
-            </div>
-          </form>
-        )}
+          <div className="text-center">
+            <Link to="/login" className="text-sm font-medium text-orange hover:text-orange/80">
+              Back to login
+            </Link>
+          </div>
+        </form>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import Dashboard from './pages/Dashboard';
-import VideoPlayer from './pages/VideoPlayer';
+import VideoPlayer from './pages/VideoPlayerPage';
 import UserProfile from './pages/UserProfile';
 import PlaylistManagement from './pages/PlaylistManagement';
 import ChannelManagement from './pages/ChannelManagement';

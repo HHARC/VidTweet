@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  PlusCircle, 
-  Edit, 
-  Trash2, 
-  MoreVertical, 
-  Play,
-  Lock,
-  Globe
-} from 'lucide-react';
+import { PlusCircle, Edit, Trash2, MoreVertical, Play, Lock, Globe } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import { API_BASE_URL } from '../utils/api';
+import axios from 'axios';
 
 interface Playlist {
   id: string;
@@ -34,46 +28,22 @@ const PlaylistManagement: React.FC = () => {
     description: '',
     isPrivate: false,
   });
-  
-  // Mock playlists data
-  const [playlists, setPlaylists] = useState<Playlist[]>([
-    {
-      id: 'playlist-1',
-      title: 'Favorite Videos',
-      description: 'A collection of my all-time favorite videos',
-      thumbnail: 'https://picsum.photos/seed/101/640/360',
-      videoCount: 15,
-      isPrivate: false,
-      createdAt: 'April 5, 2025',
-    },
-    {
-      id: 'playlist-2',
-      title: 'Watch Later',
-      description: 'Videos to watch when I have time',
-      thumbnail: 'https://picsum.photos/seed/102/640/360',
-      videoCount: 27,
-      isPrivate: true,
-      createdAt: 'March 20, 2025',
-    },
-    {
-      id: 'playlist-3',
-      title: 'Coding Tutorials',
-      description: 'Helpful tutorials for learning to code',
-      thumbnail: 'https://picsum.photos/seed/103/640/360',
-      videoCount: 8,
-      isPrivate: false,
-      createdAt: 'February 15, 2025',
-    },
-    {
-      id: 'playlist-4',
-      title: 'UI/UX Design',
-      description: 'Inspiration and tutorials for UI/UX design',
-      thumbnail: 'https://picsum.photos/seed/104/640/360',
-      videoCount: 12,
-      isPrivate: true,
-      createdAt: 'January 10, 2025',
-    },
-  ]);
+
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+
+  // Fetch playlists on component mount
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      try {
+        const userId = 'userId'; // Replace with actual user ID or from context
+        const response = await axios.get(`${API_BASE_URL}/playlists/user/${userId}`);
+        setPlaylists(response.data.data);
+      } catch (error) {
+        console.error('Error fetching playlists:', error);
+      }
+    };
+    fetchPlaylists();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -105,58 +75,54 @@ const PlaylistManagement: React.FC = () => {
     });
   };
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // In a real app, you would create the playlist via API
-    const newPlaylist: Playlist = {
-      id: `playlist-${Date.now()}`,
-      title: formData.title,
-      description: formData.description,
-      thumbnail: 'https://picsum.photos/seed/new/640/360', // Default thumbnail
-      videoCount: 0,
-      isPrivate: formData.isPrivate,
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-    };
-    
-    setPlaylists((prev) => [newPlaylist, ...prev]);
-    setIsCreating(false);
-    setFormData({
-      title: '',
-      description: '',
-      isPrivate: false,
-    });
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/playlists/`, formData);
+      setPlaylists((prev) => [response.data.data, ...prev]);
+      setIsCreating(false);
+      setFormData({
+        title: '',
+        description: '',
+        isPrivate: false,
+      });
+    } catch (error) {
+      console.error('Error creating playlist:', error);
+    }
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // In a real app, you would update the playlist via API
-    setPlaylists((prev) =>
-      prev.map((playlist) =>
-        playlist.id === isEditing
-          ? {
-              ...playlist,
-              title: formData.title,
-              description: formData.description,
-              isPrivate: formData.isPrivate,
-            }
-          : playlist
-      )
-    );
-    
-    setIsEditing(null);
-    setFormData({
-      title: '',
-      description: '',
-      isPrivate: false,
-    });
+
+    try {
+      const response = await axios.patch(`${API_BASE_URL}/playlists/${isEditing}`, formData);
+      setPlaylists((prev) =>
+        prev.map((playlist) =>
+          playlist.id === isEditing
+            ? { ...playlist, ...response.data.data }
+            : playlist
+        )
+      );
+      setIsEditing(null);
+      setFormData({
+        title: '',
+        description: '',
+        isPrivate: false,
+      });
+    } catch (error) {
+      console.error('Error editing playlist:', error);
+    }
   };
 
-  const handleDeletePlaylist = (id: string) => {
-    // In a real app, you would delete the playlist via API
-    setPlaylists((prev) => prev.filter((playlist) => playlist.id !== id));
-    setShowDropdown(null);
+  const handleDeletePlaylist = async (id: string) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/playlists/${id}`);
+      setPlaylists((prev) => prev.filter((playlist) => playlist.id !== id));
+      setShowDropdown(null);
+    } catch (error) {
+      console.error('Error deleting playlist:', error);
+    }
   };
 
   const toggleDropdown = (id: string) => {
@@ -170,7 +136,7 @@ const PlaylistManagement: React.FC = () => {
           <h1 className="mb-2 text-3xl font-bold text-text-primary">Your Playlists</h1>
           <p className="text-text-secondary">Manage your video collections</p>
         </div>
-        
+
         <Button
           variant="primary"
           className="mt-4 sm:mt-0"
@@ -189,7 +155,7 @@ const PlaylistManagement: React.FC = () => {
           <h3 className="mb-6 text-xl font-bold text-text-primary">
             {isCreating ? 'Create New Playlist' : 'Edit Playlist'}
           </h3>
-          
+
           <form onSubmit={isCreating ? handleCreateSubmit : handleEditSubmit} className="space-y-4">
             <Input
               label="Playlist Name"
@@ -199,7 +165,7 @@ const PlaylistManagement: React.FC = () => {
               required
               placeholder="Enter a name for your playlist"
             />
-            
+
             <div>
               <label className="mb-1 block text-sm font-medium text-text-primary">
                 Description
@@ -213,7 +179,7 @@ const PlaylistManagement: React.FC = () => {
                 placeholder="Enter a description for your playlist"
               />
             </div>
-            
+
             <div className="flex items-center">
               <input
                 id="isPrivate"
@@ -227,7 +193,7 @@ const PlaylistManagement: React.FC = () => {
                 Make this playlist private
               </label>
             </div>
-            
+
             <div className="mt-6 flex justify-end space-x-2">
               <Button
                 type="button"
@@ -257,20 +223,20 @@ const PlaylistManagement: React.FC = () => {
                   alt={playlist.title}
                   className="aspect-video w-full rounded-md object-cover transition-transform duration-300 group-hover:scale-105"
                 />
-                
+
                 <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                
+
                 <div className="absolute inset-0 flex items-center justify-center">
                   <button className="rounded-full bg-white bg-opacity-80 p-3 text-orange opacity-0 transition-opacity duration-300 hover:bg-opacity-100 group-hover:opacity-100">
                     <Play size={24} />
                   </button>
                 </div>
-                
+
                 <div className="absolute bottom-2 right-2 rounded bg-black bg-opacity-70 px-2 py-1 text-xs font-medium text-white">
                   {playlist.videoCount} {playlist.videoCount === 1 ? 'video' : 'videos'}
                 </div>
               </Link>
-              
+
               <div className="absolute right-2 top-2">
                 <div className="relative">
                   <button
@@ -279,7 +245,7 @@ const PlaylistManagement: React.FC = () => {
                   >
                     <MoreVertical size={16} />
                   </button>
-                  
+
                   {showDropdown === playlist.id && (
                     <div className="absolute right-0 top-8 z-10 w-40 rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 dark:bg-gray-800">
                       <button
@@ -289,7 +255,7 @@ const PlaylistManagement: React.FC = () => {
                         <Edit size={16} className="mr-2" />
                         Edit playlist
                       </button>
-                      
+
                       <button
                         className="flex w-full items-center px-4 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
                         onClick={() => handleDeletePlaylist(playlist.id)}
@@ -302,7 +268,7 @@ const PlaylistManagement: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="p-4">
               <div className="flex items-start justify-between">
                 <div>
@@ -311,7 +277,7 @@ const PlaylistManagement: React.FC = () => {
                       {playlist.title}
                     </h3>
                   </Link>
-                  
+
                   <div className="flex items-center text-xs text-text-secondary">
                     <span>Created {playlist.createdAt}</span>
                     <span className="mx-1">•</span>
@@ -329,7 +295,7 @@ const PlaylistManagement: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {playlist.description && (
                 <p className="mt-2 line-clamp-2 text-sm text-text-secondary">
                   {playlist.description}

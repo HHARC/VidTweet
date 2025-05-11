@@ -19,6 +19,7 @@ interface AuthContextType {
   signup: (userData: User) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
+  changePassword: (username: string, email: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,29 +29,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in
     const checkAuthStatus = async () => {
       try {
         const accessToken = localStorage.getItem('accessToken');
         
         if (accessToken) {
-          // Fetch current user data
           const response = await axios.get(`${API_BASE_URL}/users/current-user`, {
             headers: {
               Authorization: `Bearer ${accessToken}`
             }
           });
-          
+
           if (response.data.statusCode === 200) {
             setUser(response.data.data);
           } else {
-            // Token might be invalid, try to refresh
             await refreshToken();
           }
         }
       } catch (error) {
         console.error('Failed to fetch user:', error);
-        // Clear potentially invalid tokens
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
@@ -70,9 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('No refresh token available');
       }
       
-      const response = await axios.post(`${API_BASE_URL}/users/refresh-token`, {
-        refreshToken
-      });
+      const response = await axios.post(`${API_BASE_URL}/users/refresh-token`, { refreshToken });
       
       if (response.data.statusCode === 200) {
         const { accessToken, refreshToken: newRefreshToken } = response.data.data;
@@ -80,13 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', newRefreshToken);
         
-        // Fetch user data with new token
         const userResponse = await axios.get(`${API_BASE_URL}/users/current-user`, {
           headers: {
             Authorization: `Bearer ${accessToken}`
           }
         });
-        
+
         if (userResponse.data.statusCode === 200) {
           setUser(userResponse.data.data);
         }
@@ -95,7 +89,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Failed to refresh token:', error);
-      // Clear localStorage
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
@@ -106,8 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (userData: User) => {
     setIsLoading(true);
     try {
-      // The actual API call is being handled in the Login component
-      // Just set the user in the context
       setUser(userData);
     } catch (error) {
       console.error('Login failed:', error);
@@ -120,15 +111,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (userData: User) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    // Note: The actual API call is being handled in the Signup component
-    // The auth context just stores the user information after successful signup
   };
 
   const logout = async () => {
     setIsLoading(true);
     try {
       const accessToken = localStorage.getItem('accessToken');
-      
       if (accessToken) {
         await axios.post(`${API_BASE_URL}/users/logout`, {}, {
           headers: {
@@ -139,7 +127,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
-      // Clear user data regardless of API success
       setUser(null);
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -150,13 +137,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const forgotPassword = async (email: string) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/users/forgot-password`, {
-        email
-      });
-      
+      const response = await axios.post(`${API_BASE_URL}/users/forgot-password`, { email });
       return response.data;
     } catch (error) {
       console.error('Forgot password failed:', error);
+      throw error;
+    }
+  };
+
+  const changePassword = async (username: string, email: string, newPassword: string) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/users/change-password`, {
+        username,
+        email,
+        newPassword
+      });
+      
+      if (response.status === 200) {
+        alert("Password changed successfully!");
+      }
+    } catch (error) {
+      console.error('Password change failed:', error);
       throw error;
     }
   };
@@ -171,6 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         logout,
         forgotPassword,
+        changePassword,
       }}
     >
       {children}

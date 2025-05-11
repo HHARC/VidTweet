@@ -1,2 +1,2 @@
 // src/utils/api.js
-export const API_BASE_URL = "https://backend-vidtweet.vercel.app/api/v1";
+export const API_BASE_URL = "http://localhost:8000/api/v1";
