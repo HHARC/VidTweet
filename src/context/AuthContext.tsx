@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { API_BASE_URL } from '../utils/api';
+import api from '../utils/api';
 
 interface User {
   _id: string;
@@ -15,8 +14,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (userData: User) => Promise<void>;
-  signup: (userData: User) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (formData: FormData) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   changePassword: (username: string, email: string, newPassword: string) => Promise<void>;
@@ -59,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuthStatus();
   }, []);
 
-  const refreshToken = async () => {
+  const login = async (email: string, password: string) => {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       
@@ -70,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await axios.post(`${API_BASE_URL}/users/refresh-token`, { refreshToken });
       
       if (response.data.statusCode === 200) {
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        const { accessToken, refreshToken, user } = response.data.data;
         
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', newRefreshToken);
@@ -101,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setUser(userData);
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Signup failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -114,7 +113,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    setIsLoading(true);
     try {
       const accessToken = localStorage.getItem('accessToken');
       if (accessToken) {
@@ -131,7 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
-      setIsLoading(false);
     }
   };
 
